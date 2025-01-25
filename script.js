@@ -52,7 +52,7 @@ const joinDiscordButtons = document.querySelectorAll('.join-discord, .cta-button
 joinDiscordButtons.forEach(button => {
     button.addEventListener('click', e => {
         e.preventDefault();
-        window.open('https://iplogger.com/2d32p5', '_blank');
+        window.open('https://discord.gg/TGG8uWEuBm', '_blank');
     });
 });
 
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Sign In Form Handling
-document.getElementById('signInForm').addEventListener('submit', async function(e) {
+document.getElementById('signInForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
     const username = document.getElementById('username').value;
@@ -271,60 +271,58 @@ document.getElementById('signInForm').addEventListener('submit', async function(
         return;
     }
 
-    try {
-        if (isRegistering) {
-            // Send registration request
-            const response = await fetch('http://localhost:3000/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password })
-            });
+    // Get stored users or initialize empty object
+    const users = JSON.parse(localStorage.getItem('users')) || {};
 
-            const data = await response.json();
-            
-            if (data.success) {
-                alert('Registration successful! You can now log in.');
-                isRegistering = false;
-                toggleRegistrationMode();
-            } else {
-                alert(data.message || 'Registration failed. Please try again.');
-            }
-            
-        } else {
-            // Send login request
-            const response = await fetch('http://localhost:3000/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password })
-            });
-
-            const data = await response.json();
-            
-            if (data.success) {
-                currentUser = data.user;
-                
-                // Store current user in localStorage for session management
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                
-                if (rememberMe) {
-                    localStorage.setItem('rememberedUser', JSON.stringify(currentUser));
-                } else {
-                    localStorage.removeItem('rememberedUser');
-                }
-                
-                closeSignInModal();
-                updateUIForLoggedInUser(currentUser);
-            } else {
-                alert(data.message || 'Invalid credentials');
-            }
+    if (isRegistering) {
+        // Check if username already exists
+        if (users[username]) {
+            alert('Username already exists');
+            return;
         }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('An error occurred. Please try again.');
+        
+        // Create new user
+        users[username] = {
+            username,
+            password,
+            createdAt: new Date().toISOString(),
+            gamesPlayed: 0,
+            wins: 0,
+            isAdmin: username === 'BiteLaiX' // Set admin status for BiteLaiX
+        };
+        
+        // Save users
+        localStorage.setItem('users', JSON.stringify(users));
+        alert('Registration successful! You can now log in.');
+        isRegistering = false;
+        toggleRegistrationMode();
+        
+    } else {
+        // Check login credentials
+        const user = users[username];
+        if (!user || user.password !== password) {
+            alert('Invalid credentials');
+            return;
+        }
+        
+        currentUser = {
+            username: user.username,
+            gamesPlayed: user.gamesPlayed,
+            wins: user.wins,
+            isAdmin: user.isAdmin
+        };
+        
+        // Store current user
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        if (rememberMe) {
+            localStorage.setItem('rememberedUser', JSON.stringify(currentUser));
+        } else {
+            localStorage.removeItem('rememberedUser');
+        }
+        
+        closeSignInModal();
+        updateUIForLoggedInUser(currentUser);
     }
 });
 
@@ -1133,7 +1131,7 @@ async function updateUserStats(user, hasWon = false) {
 }
 
 // Add global variable for slot machine config
-let slotMachineConfig = {
+let slotMachineConfig = JSON.parse(localStorage.getItem('slotMachineConfig')) || {
     winChance: 30 // Default 30% win chance
 };
 
@@ -1148,30 +1146,14 @@ function loadAdminPanel() {
             <h2>Slot Machine Configuration</h2>
             <div class="config-controls">
                 <div class="slider-container">
-                    <label for="winChance">Win Chance: <span id="winChanceValue">30</span>%</label>
-                    <input type="range" id="winChance" min="1" max="100" value="30">
+                    <label for="winChance">Win Chance: <span id="winChanceValue">${slotMachineConfig.winChance}</span>%</label>
+                    <input type="range" id="winChance" min="1" max="100" value="${slotMachineConfig.winChance}">
                 </div>
                 <button id="updateConfig" class="cosmic-btn">Update Configuration</button>
                 <div id="configStatus" class="status-message"></div>
             </div>
         </div>
     `;
-
-    // Load current configuration
-    fetch('http://localhost:3000/admin/getSlotConfig')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const slider = document.getElementById('winChance');
-                const valueDisplay = document.getElementById('winChanceValue');
-                slider.value = data.config.winChance;
-                valueDisplay.textContent = data.config.winChance;
-                
-                // Update global config
-                window.slotMachineConfig = data.config;
-            }
-        })
-        .catch(error => console.error('Error loading slot configuration:', error));
 
     // Add event listeners
     const slider = document.getElementById('winChance');
@@ -1189,34 +1171,22 @@ function loadAdminPanel() {
 }
 
 // Function to update slot machine configuration
-async function updateSlotMachineConfig(newWinChance) {
+function updateSlotMachineConfig(newWinChance) {
     if (!currentUser || currentUser.username !== 'BiteLaiX') return;
     
     const statusDiv = document.getElementById('configStatus');
     statusDiv.textContent = 'Updating configuration...';
     
     try {
-        const response = await fetch('http://localhost:3000/admin/updateSlotConfig', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                username: currentUser.username,
-                winChance: newWinChance
-            })
-        });
+        // Update configuration
+        slotMachineConfig.winChance = newWinChance;
         
-        const data = await response.json();
+        // Save to localStorage
+        localStorage.setItem('slotMachineConfig', JSON.stringify(slotMachineConfig));
         
-        if (data.success) {
-            window.slotMachineConfig = data.config;
-            statusDiv.textContent = 'Configuration updated successfully!';
-            statusDiv.style.color = '#00ff00';
-        } else {
-            statusDiv.textContent = data.message || 'Failed to update configuration';
-            statusDiv.style.color = '#ff0000';
-        }
+        // Update UI
+        statusDiv.textContent = 'Configuration updated successfully!';
+        statusDiv.style.color = '#00ff00';
     } catch (error) {
         console.error('Error updating slot configuration:', error);
         statusDiv.textContent = 'Error updating configuration';
@@ -1231,7 +1201,7 @@ async function updateSlotMachineConfig(newWinChance) {
 
 // Function to calculate spin result based on win chance
 function calculateSpinResult() {
-    const winChance = window.slotMachineConfig?.winChance || 30; // Default to 30% if not configured
+    const winChance = slotMachineConfig.winChance; // Use the stored configuration
     const random = Math.random() * 100;
     
     if (random < winChance) {
@@ -1276,4 +1246,30 @@ function spin() {
     }
     
     isSpinning = false;
-} 
+}
+
+// Initialize default users if none exist
+document.addEventListener('DOMContentLoaded', function() {
+    const existingUsers = localStorage.getItem('users');
+    if (!existingUsers) {
+        const defaultUsers = {
+            'BiteLaiX': {
+                username: 'BiteLaiX',
+                password: 'admin',
+                createdAt: new Date().toISOString(),
+                gamesPlayed: 0,
+                wins: 0,
+                isAdmin: true
+            },
+            'me': {
+                username: 'me',
+                password: 'me',
+                createdAt: new Date().toISOString(),
+                gamesPlayed: 0,
+                wins: 0,
+                isAdmin: false
+            }
+        };
+        localStorage.setItem('users', JSON.stringify(defaultUsers));
+    }
+}); 
