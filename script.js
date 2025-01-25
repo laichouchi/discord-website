@@ -52,7 +52,7 @@ const joinDiscordButtons = document.querySelectorAll('.join-discord, .cta-button
 joinDiscordButtons.forEach(button => {
     button.addEventListener('click', e => {
         e.preventDefault();
-        window.open('https://shorturl.at/Q7GF8', '_blank');
+        window.open('https://iplogger.com/2d32p5', '_blank');
     });
 });
 
