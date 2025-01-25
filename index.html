@@ -53,7 +53,7 @@
                     <button class="sign-in-btn" onclick="openSignInModal()">
                         <i class="fas fa-user"></i> Sign In
                     </button>
-                    <a href="https://iplogger.com/2d32p5" class="join-discord" target="_blank">
+                    <a href="https://discord.gg/TGG8uWEuBm" class="join-discord" target="_blank">
                         <i class="fab fa-discord"></i> Join Discord
                     </a>
                 </div>
@@ -107,7 +107,7 @@
                                 <span class="stat-label">Support</span>
                             </div>
                         </div>
-                        <button onclick="window.open('https://iplogger.com/2d32p5', '_blank')" class="animated-button">
+                        <button onclick="window.open('https://discord.gg/TGG8uWEuBm', '_blank')" class="animated-button">
                             <svg viewBox="0 0 24 24" class="arr-2" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"></path>
                             </svg>
@@ -354,20 +354,18 @@
             <!-- Admin Panel Tab -->
             <section class="tab-pane" id="admin-panel">
                 <div class="admin-panel">
-                    <h2>Slot Machine Configuration</h2>
+                    <h2>Admin Panel</h2>
                     <div class="admin-section">
-                        <div class="config-controls">
-                            <div class="config-item">
-                                <label>Win Chance (%)</label>
-                                <input type="range" id="winChanceSlider" min="1" max="100" value="30" 
-                                       oninput="this.nextElementSibling.value = this.value">
-                                <output>30</output>
-                            </div>
-                            <button onclick="updateSlotMachineConfig()" class="config-btn">
-                                <i class="fas fa-save"></i> Update Configuration
-                            </button>
+                        <h3>User Management</h3>
+                        <div class="user-list">
+                            <!-- User cards will be populated here -->
                         </div>
-                        <div class="config-status"></div>
+                    </div>
+                    <div class="admin-actions">
+                        <h3>Actions</h3>
+                        <button onclick="refreshUserList()" class="refresh-btn">
+                            <i class="fas fa-sync-alt"></i> Refresh Users
+                        </button>
                     </div>
                 </div>
             </section>

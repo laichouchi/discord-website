@@ -1,30 +1,3 @@
-// CONFIGURATION - Edit these values to change game behavior
-const GAME_CONFIG = {
-    // Win rate for the slot machine (1-100)
-    DEFAULT_WIN_RATE: 30,
-    
-    // Chances for specific numbers (must add up to 100)
-    NUMBER_CHANCES: {
-        1: 20,  // 20% chance for number 1
-        2: 15,  // 15% chance for number 2
-        3: 15,  // 15% chance for number 3
-        4: 20,  // 20% chance for number 4
-        5: 15,  // 15% chance for number 5
-        6: 15   // 15% chance for number 6
-    }
-};
-
-// Function to validate number chances
-function validateNumberChances() {
-    const total = Object.values(GAME_CONFIG.NUMBER_CHANCES).reduce((sum, chance) => sum + chance, 0);
-    if (total !== 100) {
-        console.error(`Warning: Number chances sum to ${total}%, should be 100%`);
-    }
-}
-
-// Validate configuration on load
-validateNumberChances();
-
 // Navigation active state
 document.addEventListener('DOMContentLoaded', () => {
     const sections = document.querySelectorAll('section');
@@ -265,107 +238,93 @@ document.addEventListener('DOMContentLoaded', function() {
 // Global variables
 let currentUser = null;
 
-// Update user stats function (client-side version)
-function updateUserStats(hasWon = false) {
-    if (!currentUser) return;
-    
-    try {
-        // Get users from localStorage
-        const users = JSON.parse(localStorage.getItem('users')) || {};
-        const user = users[currentUser.username];
-        
-        if (user) {
-            // Update stats
-            user.gamesPlayed++;
-            if (hasWon) {
-                user.wins++;
-            }
-            
-            // Save back to localStorage
-            localStorage.setItem('users', JSON.stringify(users));
-            
-            // Update current user
-            currentUser.gamesPlayed = user.gamesPlayed;
-            currentUser.wins = user.wins;
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            
-            // Update UI
-            const gamesElement = document.querySelector('.menu-item:nth-child(1)');
-            const winsElement = document.querySelector('.menu-item:nth-child(2)');
-            if (gamesElement) gamesElement.innerHTML = `<i class="fas fa-gamepad"></i> Games: ${currentUser.gamesPlayed}`;
-            if (winsElement) winsElement.innerHTML = `<i class="fas fa-trophy"></i> Wins: ${currentUser.wins}`;
-        }
-    } catch (error) {
-        console.error('Error updating user stats:', error);
-    }
-}
-
-// Update the spin function
-function spin() {
-    if (isSpinning) return;
-    isSpinning = true;
-    
-    const numbers = calculateSpinResult();
-    // ... rest of the spin animation code ...
-    
-    // After animation completes:
-    const hasWon = numbers[0] === numbers[1] && numbers[1] === numbers[2];
-    if (hasWon) {
-        // Handle win
-        showWinAnimation();
-        if (currentUser) {
-            updateUserStats(true);
-        }
-    } else {
-        // Handle loss
-        if (currentUser) {
-            updateUserStats(false);
-        }
-    }
-    
-    isSpinning = false;
-}
-
-// Initialize default users and config when page loads
+// Check if user is already logged in on page load
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize users if none exist
-    const existingUsers = localStorage.getItem('users');
-    if (!existingUsers) {
-        const defaultUsers = {
-            'BiteLaiX': {
-                username: 'BiteLaiX',
-                password: 'admin',
-                createdAt: new Date().toISOString(),
-                gamesPlayed: 0,
-                wins: 0,
-                isAdmin: true
-            },
-            'me': {
-                username: 'me',
-                password: 'me',
-                createdAt: new Date().toISOString(),
-                gamesPlayed: 0,
-                wins: 0,
-                isAdmin: false
-            }
-        };
-        localStorage.setItem('users', JSON.stringify(defaultUsers));
-    }
-    
-    // Initialize slot machine config if none exists
-    const existingConfig = localStorage.getItem('slotMachineConfig');
-    if (!existingConfig) {
-        const defaultConfig = {
-            winChance: GAME_CONFIG.DEFAULT_WIN_RATE
-        };
-        localStorage.setItem('slotMachineConfig', JSON.stringify(defaultConfig));
-    }
-    
-    // Check for remembered user
     const rememberedUser = localStorage.getItem('rememberedUser');
     if (rememberedUser) {
         currentUser = JSON.parse(rememberedUser);
         updateUIForLoggedInUser(currentUser);
+    }
+    
+    // Initialize modal state
+    const modal = document.getElementById('signInModal');
+    modal.style.display = 'none';
+    
+    // Add register link event listener
+    document.getElementById('register-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        toggleRegistrationMode();
+    });
+});
+
+// Sign In Form Handling
+document.getElementById('signInForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const rememberMe = document.getElementById('rememberMe').checked;
+    
+    // Basic validation
+    if (!username || !password) {
+        alert('Please fill in all fields');
+        return;
+    }
+
+    try {
+        if (isRegistering) {
+            // Send registration request
+            const response = await fetch('http://localhost:3000/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                alert('Registration successful! You can now log in.');
+                isRegistering = false;
+                toggleRegistrationMode();
+            } else {
+                alert(data.message || 'Registration failed. Please try again.');
+            }
+            
+        } else {
+            // Send login request
+            const response = await fetch('http://localhost:3000/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                currentUser = data.user;
+                
+                // Store current user in localStorage for session management
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                if (rememberMe) {
+                    localStorage.setItem('rememberedUser', JSON.stringify(currentUser));
+                } else {
+                    localStorage.removeItem('rememberedUser');
+                }
+                
+                closeSignInModal();
+                updateUIForLoggedInUser(currentUser);
+            } else {
+                alert(data.message || 'Invalid credentials');
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
     }
 });
 
@@ -407,42 +366,6 @@ function updateUIForLoggedInUser(user) {
         profilePic.style.cursor = 'pointer';
         profilePic.addEventListener('click', showProfilePopup);
     }
-
-    // Add admin panel tab if user is BiteLaiX
-    if (user.username === 'BiteLaiX') {
-        const navLinks = document.querySelector('.nav-links');
-        const existingAdminTab = document.querySelector('[data-tab="admin-panel"]');
-        
-        if (!existingAdminTab) {
-            const adminTab = document.createElement('a');
-            adminTab.href = '#admin-panel';
-            adminTab.className = 'tab-link';
-            adminTab.setAttribute('data-tab', 'admin-panel');
-            adminTab.innerHTML = '<i class="fas fa-shield-alt"></i> Admin Panel';
-            navLinks.appendChild(adminTab);
-            
-            // Add click event
-            adminTab.addEventListener('click', function(e) {
-                e.preventDefault();
-                document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
-                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Make sure admin panel exists and is visible
-                let adminPanel = document.getElementById('admin-panel');
-                if (!adminPanel) {
-                    adminPanel = document.createElement('section');
-                    adminPanel.id = 'admin-panel';
-                    adminPanel.className = 'tab-pane';
-                    document.querySelector('.tab-content').appendChild(adminPanel);
-                }
-                adminPanel.classList.add('active');
-                
-                // Load admin panel content
-                loadAdminPanel();
-            });
-        }
-    }
 }
 
 // Sign Out Function
@@ -455,12 +378,6 @@ function signOut() {
     const userMenu = document.querySelector('.user-menu');
     if (userMenu) {
         userMenu.remove();
-    }
-    
-    // Remove admin panel tab if it exists
-    const adminTab = document.querySelector('[data-tab="admin-panel"]');
-    if (adminTab) {
-        adminTab.remove();
     }
     
     // Update sign in button
@@ -527,7 +444,7 @@ function toggleRegistrationMode() {
     isRegistering = !isRegistering;
     const form = document.getElementById('signInForm');
     const formTitle = form.querySelector('.form-login');
-    const submitBtn = form.querySelector('button[type="submit"]');
+    const submitBtn = form.querySelector('.btn');
     const registerText = form.querySelector('.register-link p');
     const usernameInput = document.getElementById('username');
     
@@ -535,12 +452,12 @@ function toggleRegistrationMode() {
         formTitle.textContent = 'Register';
         submitBtn.textContent = 'Register';
         registerText.innerHTML = 'Already have an account? <a href="#" id="register-link">Sign In</a>';
-        usernameInput.placeholder = 'Username';
+        usernameInput.placeholder = 'Discord Username';
     } else {
         formTitle.textContent = 'Login';
         submitBtn.textContent = 'Login';
         registerText.innerHTML = 'Don\'t have an account? <a href="#" id="register-link">Register</a>';
-        usernameInput.placeholder = 'Username';
+        usernameInput.placeholder = 'Discord Username';
     }
     
     // Re-attach click event to the new register link
@@ -966,7 +883,7 @@ function showProfilePopup() {
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         
         // Update user stats in storage
-        updateUserStats(true);
+        updateUserStats(currentUser);
         
         // Call original spin handler
         originalSpinHandler.call(this);
@@ -976,7 +893,7 @@ function showProfilePopup() {
         if (values.length === 3 && values[0] === values[1] && values[1] === values[2]) {
             currentUser.wins++;
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            updateUserStats(true);
+            updateUserStats(currentUser, true);
         }
     };
 }
@@ -1140,237 +1057,35 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Function to load admin panel content
-function loadAdminPanel() {
-    const adminPanel = document.querySelector('#admin-panel');
-    if (!adminPanel) return;
-
-    // Clear existing content
-    adminPanel.innerHTML = `
-        <div class="admin-section">
-            <h2>Slot Machine Configuration</h2>
-            <div class="config-controls">
-                <div class="slider-container">
-                    <label for="winChance">Win Chance: <span id="winChanceValue">${slotMachineConfig.winChance}</span>%</label>
-                    <input type="range" id="winChance" min="1" max="100" value="${slotMachineConfig.winChance}">
-                </div>
-                <button id="updateConfig" class="cosmic-btn">Update Configuration</button>
-                <div id="configStatus" class="status-message"></div>
-            </div>
-        </div>
-    `;
-
-    // Add event listeners
-    const slider = document.getElementById('winChance');
-    const valueDisplay = document.getElementById('winChanceValue');
-    const updateButton = document.getElementById('updateConfig');
-
-    slider.addEventListener('input', (e) => {
-        valueDisplay.textContent = e.target.value;
-    });
-
-    updateButton.addEventListener('click', () => {
-        const newWinChance = parseInt(slider.value);
-        updateSlotMachineConfig(newWinChance);
-    });
-}
-
-// Function to update slot machine configuration
-function updateSlotMachineConfig(newWinChance) {
-    if (!currentUser || currentUser.username !== 'BiteLaiX') return;
-    
-    const statusDiv = document.getElementById('configStatus');
-    statusDiv.textContent = 'Updating configuration...';
-    
+// Update game stats after each spin
+async function updateUserStats(user, hasWon = false) {
     try {
-        // Update configuration
-        slotMachineConfig.winChance = newWinChance;
-        
-        // Save to localStorage
-        localStorage.setItem('slotMachineConfig', JSON.stringify(slotMachineConfig));
-        
-        // Update UI
-        statusDiv.textContent = 'Configuration updated successfully!';
-        statusDiv.style.color = '#00ff00';
-    } catch (error) {
-        console.error('Error updating slot configuration:', error);
-        statusDiv.textContent = 'Error updating configuration';
-        statusDiv.style.color = '#ff0000';
-    }
-    
-    // Clear status message after 3 seconds
-    setTimeout(() => {
-        statusDiv.textContent = '';
-    }, 3000);
-}
-
-// Function to calculate spin result based on win chance
-function calculateSpinResult() {
-    const winChance = slotMachineConfig.winChance;
-    const random = Math.random() * 100;
-    
-    if (random < winChance) {
-        // Generate a winning combination using NUMBER_CHANCES
-        const randomForNumber = Math.random() * 100;
-        let cumulativeChance = 0;
-        let selectedNumber = 1;
-        
-        for (const [number, chance] of Object.entries(GAME_CONFIG.NUMBER_CHANCES)) {
-            cumulativeChance += chance;
-            if (randomForNumber <= cumulativeChance) {
-                selectedNumber = parseInt(number);
-                break;
-            }
-        }
-        
-        return [selectedNumber, selectedNumber, selectedNumber];
-    } else {
-        // Generate a losing combination (at least one number different)
-        let numbers;
-        do {
-            numbers = Array(3).fill(0).map(() => {
-                const randomForNumber = Math.random() * 100;
-                let cumulativeChance = 0;
-                
-                for (const [number, chance] of Object.entries(GAME_CONFIG.NUMBER_CHANCES)) {
-                    cumulativeChance += chance;
-                    if (randomForNumber <= cumulativeChance) {
-                        return parseInt(number);
-                    }
-                }
-                return 6; // Fallback
-            });
-        } while (numbers[0] === numbers[1] && numbers[1] === numbers[2]);
-        
-        return numbers;
-    }
-}
-
-// Show win animation
-function showWinAnimation() {
-    // Implementation of showWinAnimation function
-}
-
-// Sign In Form Handling
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize default users if none exist
-    const existingUsers = localStorage.getItem('users');
-    if (!existingUsers) {
-        const defaultUsers = {
-            'BiteLaiX': {
-                username: 'BiteLaiX',
-                password: 'admin',
-                createdAt: new Date().toISOString(),
-                gamesPlayed: 0,
-                wins: 0,
-                isAdmin: true
+        const response = await fetch('http://localhost:3000/updateStats', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
             },
-            'me': {
-                username: 'me',
-                password: 'me',
-                createdAt: new Date().toISOString(),
-                gamesPlayed: 0,
-                wins: 0,
-                isAdmin: false
-            }
-        };
-        localStorage.setItem('users', JSON.stringify(defaultUsers));
-    }
-
-    // Initialize modal
-    const modal = document.getElementById('signInModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-
-    // Add click handler for sign in button
-    const signInBtn = document.querySelector('.sign-in-btn');
-    if (signInBtn) {
-        signInBtn.addEventListener('click', openSignInModal);
-    }
-
-    // Add submit handler for sign in form
-    const signInForm = document.getElementById('signInForm');
-    if (signInForm) {
-        signInForm.addEventListener('submit', handleSignInSubmit);
-    }
-
-    // Add click handler for register link
-    const registerLink = document.getElementById('register-link');
-    if (registerLink) {
-        registerLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            toggleRegistrationMode();
+            body: JSON.stringify({
+                username: user.username,
+                hasWon: hasWon
+            })
         });
-    }
-});
 
-// Handle form submission
-function handleSignInSubmit(e) {
-    e.preventDefault();
-    
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const rememberMe = document.getElementById('rememberMe').checked;
-    
-    // Basic validation
-    if (!username || !password) {
-        alert('Please fill in all fields');
-        return;
-    }
-
-    // Get stored users
-    const users = JSON.parse(localStorage.getItem('users')) || {};
-
-    if (isRegistering) {
-        // Handle Registration
-        if (users[username]) {
-            alert('Username already exists');
-            return;
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update current user in localStorage
+            currentUser.gamesPlayed = data.user.gamesPlayed;
+            currentUser.wins = data.user.wins;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            // Update UI
+            const gamesElement = document.querySelector('.menu-item:nth-child(1)');
+            const winsElement = document.querySelector('.menu-item:nth-child(2)');
+            if (gamesElement) gamesElement.innerHTML = `<i class="fas fa-gamepad"></i> Games: ${currentUser.gamesPlayed}`;
+            if (winsElement) winsElement.innerHTML = `<i class="fas fa-trophy"></i> Wins: ${currentUser.wins}`;
         }
-        
-        // Create new user
-        users[username] = {
-            username,
-            password,
-            createdAt: new Date().toISOString(),
-            gamesPlayed: 0,
-            wins: 0,
-            isAdmin: username === 'BiteLaiX'
-        };
-        
-        // Save users
-        localStorage.setItem('users', JSON.stringify(users));
-        alert('Registration successful! You can now log in.');
-        isRegistering = false;
-        toggleRegistrationMode();
-        
-    } else {
-        // Handle Login
-        const user = users[username];
-        if (!user || user.password !== password) {
-            alert('Invalid credentials');
-            return;
-        }
-        
-        // Set current user
-        currentUser = {
-            username: user.username,
-            gamesPlayed: user.gamesPlayed,
-            wins: user.wins,
-            isAdmin: user.isAdmin
-        };
-        
-        // Store current user
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        
-        if (rememberMe) {
-            localStorage.setItem('rememberedUser', JSON.stringify(currentUser));
-        } else {
-            localStorage.removeItem('rememberedUser');
-        }
-        
-        closeSignInModal();
-        updateUIForLoggedInUser(currentUser);
+    } catch (error) {
+        console.error('Error updating user stats:', error);
     }
 } 
