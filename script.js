@@ -527,7 +527,7 @@ function toggleRegistrationMode() {
     isRegistering = !isRegistering;
     const form = document.getElementById('signInForm');
     const formTitle = form.querySelector('.form-login');
-    const submitBtn = form.querySelector('.btn');
+    const submitBtn = form.querySelector('button[type="submit"]');
     const registerText = form.querySelector('.register-link p');
     const usernameInput = document.getElementById('username');
     
@@ -535,12 +535,12 @@ function toggleRegistrationMode() {
         formTitle.textContent = 'Register';
         submitBtn.textContent = 'Register';
         registerText.innerHTML = 'Already have an account? <a href="#" id="register-link">Sign In</a>';
-        usernameInput.placeholder = 'Discord Username';
+        usernameInput.placeholder = 'Username';
     } else {
         formTitle.textContent = 'Login';
         submitBtn.textContent = 'Login';
         registerText.innerHTML = 'Don\'t have an account? <a href="#" id="register-link">Register</a>';
-        usernameInput.placeholder = 'Discord Username';
+        usernameInput.placeholder = 'Username';
     }
     
     // Re-attach click event to the new register link
@@ -1253,11 +1253,49 @@ function showWinAnimation() {
 
 // Sign In Form Handling
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize default users if none exist
+    const existingUsers = localStorage.getItem('users');
+    if (!existingUsers) {
+        const defaultUsers = {
+            'BiteLaiX': {
+                username: 'BiteLaiX',
+                password: 'admin',
+                createdAt: new Date().toISOString(),
+                gamesPlayed: 0,
+                wins: 0,
+                isAdmin: true
+            },
+            'me': {
+                username: 'me',
+                password: 'me',
+                createdAt: new Date().toISOString(),
+                gamesPlayed: 0,
+                wins: 0,
+                isAdmin: false
+            }
+        };
+        localStorage.setItem('users', JSON.stringify(defaultUsers));
+    }
+
+    // Initialize modal
     const modal = document.getElementById('signInModal');
     if (modal) {
         modal.style.display = 'none';
     }
-    
+
+    // Add click handler for sign in button
+    const signInBtn = document.querySelector('.sign-in-btn');
+    if (signInBtn) {
+        signInBtn.addEventListener('click', openSignInModal);
+    }
+
+    // Add submit handler for sign in form
+    const signInForm = document.getElementById('signInForm');
+    if (signInForm) {
+        signInForm.addEventListener('submit', handleSignInSubmit);
+    }
+
+    // Add click handler for register link
     const registerLink = document.getElementById('register-link');
     if (registerLink) {
         registerLink.addEventListener('click', function(e) {
@@ -1265,75 +1303,74 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleRegistrationMode();
         });
     }
+});
+
+// Handle form submission
+function handleSignInSubmit(e) {
+    e.preventDefault();
     
-    const signInForm = document.getElementById('signInForm');
-    if (signInForm) {
-        signInForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const rememberMe = document.getElementById('rememberMe').checked;
-            
-            // Basic validation
-            if (!username || !password) {
-                alert('Please fill in all fields');
-                return;
-            }
-
-            // Get stored users
-            const users = JSON.parse(localStorage.getItem('users')) || {};
-
-            if (isRegistering) {
-                // Check if username already exists
-                if (users[username]) {
-                    alert('Username already exists');
-                    return;
-                }
-                
-                // Create new user
-                users[username] = {
-                    username,
-                    password,
-                    createdAt: new Date().toISOString(),
-                    gamesPlayed: 0,
-                    wins: 0,
-                    isAdmin: username === 'BiteLaiX'
-                };
-                
-                // Save users
-                localStorage.setItem('users', JSON.stringify(users));
-                alert('Registration successful! You can now log in.');
-                isRegistering = false;
-                toggleRegistrationMode();
-                
-            } else {
-                // Check login credentials
-                const user = users[username];
-                if (!user || user.password !== password) {
-                    alert('Invalid credentials');
-                    return;
-                }
-                
-                currentUser = {
-                    username: user.username,
-                    gamesPlayed: user.gamesPlayed,
-                    wins: user.wins,
-                    isAdmin: user.isAdmin
-                };
-                
-                // Store current user
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                
-                if (rememberMe) {
-                    localStorage.setItem('rememberedUser', JSON.stringify(currentUser));
-                } else {
-                    localStorage.removeItem('rememberedUser');
-                }
-                
-                closeSignInModal();
-                updateUIForLoggedInUser(currentUser);
-            }
-        });
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const rememberMe = document.getElementById('rememberMe').checked;
+    
+    // Basic validation
+    if (!username || !password) {
+        alert('Please fill in all fields');
+        return;
     }
-}); 
+
+    // Get stored users
+    const users = JSON.parse(localStorage.getItem('users')) || {};
+
+    if (isRegistering) {
+        // Handle Registration
+        if (users[username]) {
+            alert('Username already exists');
+            return;
+        }
+        
+        // Create new user
+        users[username] = {
+            username,
+            password,
+            createdAt: new Date().toISOString(),
+            gamesPlayed: 0,
+            wins: 0,
+            isAdmin: username === 'BiteLaiX'
+        };
+        
+        // Save users
+        localStorage.setItem('users', JSON.stringify(users));
+        alert('Registration successful! You can now log in.');
+        isRegistering = false;
+        toggleRegistrationMode();
+        
+    } else {
+        // Handle Login
+        const user = users[username];
+        if (!user || user.password !== password) {
+            alert('Invalid credentials');
+            return;
+        }
+        
+        // Set current user
+        currentUser = {
+            username: user.username,
+            gamesPlayed: user.gamesPlayed,
+            wins: user.wins,
+            isAdmin: user.isAdmin
+        };
+        
+        // Store current user
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        if (rememberMe) {
+            localStorage.setItem('rememberedUser', JSON.stringify(currentUser));
+        } else {
+            localStorage.removeItem('rememberedUser');
+        }
+        
+        closeSignInModal();
+        updateUIForLoggedInUser(currentUser);
+    }
+} 
