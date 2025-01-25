@@ -238,90 +238,106 @@ document.addEventListener('DOMContentLoaded', function() {
 // Global variables
 let currentUser = null;
 
-// Check if user is already logged in on page load
+// Update user stats function (client-side version)
+function updateUserStats(hasWon = false) {
+    if (!currentUser) return;
+    
+    try {
+        // Get users from localStorage
+        const users = JSON.parse(localStorage.getItem('users')) || {};
+        const user = users[currentUser.username];
+        
+        if (user) {
+            // Update stats
+            user.gamesPlayed++;
+            if (hasWon) {
+                user.wins++;
+            }
+            
+            // Save back to localStorage
+            localStorage.setItem('users', JSON.stringify(users));
+            
+            // Update current user
+            currentUser.gamesPlayed = user.gamesPlayed;
+            currentUser.wins = user.wins;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            // Update UI
+            const gamesElement = document.querySelector('.menu-item:nth-child(1)');
+            const winsElement = document.querySelector('.menu-item:nth-child(2)');
+            if (gamesElement) gamesElement.innerHTML = `<i class="fas fa-gamepad"></i> Games: ${currentUser.gamesPlayed}`;
+            if (winsElement) winsElement.innerHTML = `<i class="fas fa-trophy"></i> Wins: ${currentUser.wins}`;
+        }
+    } catch (error) {
+        console.error('Error updating user stats:', error);
+    }
+}
+
+// Update the spin function
+function spin() {
+    if (isSpinning) return;
+    isSpinning = true;
+    
+    const numbers = calculateSpinResult();
+    // ... rest of the spin animation code ...
+    
+    // After animation completes:
+    const hasWon = numbers[0] === numbers[1] && numbers[1] === numbers[2];
+    if (hasWon) {
+        // Handle win
+        showWinAnimation();
+        if (currentUser) {
+            updateUserStats(true);
+        }
+    } else {
+        // Handle loss
+        if (currentUser) {
+            updateUserStats(false);
+        }
+    }
+    
+    isSpinning = false;
+}
+
+// Initialize default users and config when page loads
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize users if none exist
+    const existingUsers = localStorage.getItem('users');
+    if (!existingUsers) {
+        const defaultUsers = {
+            'BiteLaiX': {
+                username: 'BiteLaiX',
+                password: 'admin',
+                createdAt: new Date().toISOString(),
+                gamesPlayed: 0,
+                wins: 0,
+                isAdmin: true
+            },
+            'me': {
+                username: 'me',
+                password: 'me',
+                createdAt: new Date().toISOString(),
+                gamesPlayed: 0,
+                wins: 0,
+                isAdmin: false
+            }
+        };
+        localStorage.setItem('users', JSON.stringify(defaultUsers));
+    }
+    
+    // Initialize slot machine config if none exists
+    const existingConfig = localStorage.getItem('slotMachineConfig');
+    if (!existingConfig) {
+        const defaultConfig = {
+            winChance: 30
+        };
+        localStorage.setItem('slotMachineConfig', JSON.stringify(defaultConfig));
+    }
+    
+    // Check for remembered user
     const rememberedUser = localStorage.getItem('rememberedUser');
     if (rememberedUser) {
         currentUser = JSON.parse(rememberedUser);
-        updateUIForLoggedInUser(currentUser);
-    }
-    
-    // Initialize modal state
-    const modal = document.getElementById('signInModal');
-    modal.style.display = 'none';
-    
-    // Add register link event listener
-    document.getElementById('register-link').addEventListener('click', function(e) {
-        e.preventDefault();
-        toggleRegistrationMode();
-    });
-});
-
-// Sign In Form Handling
-document.getElementById('signInForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const rememberMe = document.getElementById('rememberMe').checked;
-    
-    // Basic validation
-    if (!username || !password) {
-        alert('Please fill in all fields');
-        return;
-    }
-
-    // Get stored users or initialize empty object
-    const users = JSON.parse(localStorage.getItem('users')) || {};
-
-    if (isRegistering) {
-        // Check if username already exists
-        if (users[username]) {
-            alert('Username already exists');
-            return;
-        }
-        
-        // Create new user
-        users[username] = {
-            username,
-            password,
-            createdAt: new Date().toISOString(),
-            gamesPlayed: 0,
-            wins: 0,
-            isAdmin: username === 'BiteLaiX' // Set admin status for BiteLaiX
-        };
-        
-        // Save users
-        localStorage.setItem('users', JSON.stringify(users));
-        alert('Registration successful! You can now log in.');
-        isRegistering = false;
-        toggleRegistrationMode();
-        
-    } else {
-        // Check login credentials
-        const user = users[username];
-        if (!user || user.password !== password) {
-            alert('Invalid credentials');
-            return;
-        }
-        
-        currentUser = {
-            username: user.username,
-            gamesPlayed: user.gamesPlayed,
-            wins: user.wins,
-            isAdmin: user.isAdmin
-        };
-        
-        // Store current user
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        
-        if (rememberMe) {
-            localStorage.setItem('rememberedUser', JSON.stringify(currentUser));
-        } else {
-            localStorage.removeItem('rememberedUser');
-        }
-        
-        closeSignInModal();
         updateUIForLoggedInUser(currentUser);
     }
 });
@@ -923,7 +939,7 @@ function showProfilePopup() {
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         
         // Update user stats in storage
-        updateUserStats(currentUser);
+        updateUserStats(true);
         
         // Call original spin handler
         originalSpinHandler.call(this);
@@ -933,7 +949,7 @@ function showProfilePopup() {
         if (values.length === 3 && values[0] === values[1] && values[1] === values[2]) {
             currentUser.wins++;
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            updateUserStats(currentUser, true);
+            updateUserStats(true);
         }
     };
 }
@@ -1097,44 +1113,6 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Update game stats after each spin
-async function updateUserStats(user, hasWon = false) {
-    try {
-        const response = await fetch('http://localhost:3000/updateStats', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                username: user.username,
-                hasWon: hasWon
-            })
-        });
-
-        const data = await response.json();
-        
-        if (data.success) {
-            // Update current user in localStorage
-            currentUser.gamesPlayed = data.user.gamesPlayed;
-            currentUser.wins = data.user.wins;
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            
-            // Update UI
-            const gamesElement = document.querySelector('.menu-item:nth-child(1)');
-            const winsElement = document.querySelector('.menu-item:nth-child(2)');
-            if (gamesElement) gamesElement.innerHTML = `<i class="fas fa-gamepad"></i> Games: ${currentUser.gamesPlayed}`;
-            if (winsElement) winsElement.innerHTML = `<i class="fas fa-trophy"></i> Wins: ${currentUser.wins}`;
-        }
-    } catch (error) {
-        console.error('Error updating user stats:', error);
-    }
-}
-
-// Add global variable for slot machine config
-let slotMachineConfig = JSON.parse(localStorage.getItem('slotMachineConfig')) || {
-    winChance: 30 // Default 30% win chance
-};
-
 // Function to load admin panel content
 function loadAdminPanel() {
     const adminPanel = document.querySelector('#admin-panel');
@@ -1222,54 +1200,94 @@ function calculateSpinResult() {
     }
 }
 
-// Update the spin function to use calculateSpinResult
-function spin() {
-    if (isSpinning) return;
-    isSpinning = true;
-    
-    const numbers = calculateSpinResult();
-    // ... rest of the spin animation code ...
-    
-    // After animation completes:
-    const hasWon = numbers[0] === numbers[1] && numbers[1] === numbers[2];
-    if (hasWon) {
-        // Handle win
-        showWinAnimation();
-        if (currentUser) {
-            updateUserStats(true);
-        }
-    } else {
-        // Handle loss
-        if (currentUser) {
-            updateUserStats(false);
-        }
-    }
-    
-    isSpinning = false;
+// Show win animation
+function showWinAnimation() {
+    // Implementation of showWinAnimation function
 }
 
-// Initialize default users if none exist
+// Sign In Form Handling
 document.addEventListener('DOMContentLoaded', function() {
-    const existingUsers = localStorage.getItem('users');
-    if (!existingUsers) {
-        const defaultUsers = {
-            'BiteLaiX': {
-                username: 'BiteLaiX',
-                password: 'admin',
-                createdAt: new Date().toISOString(),
-                gamesPlayed: 0,
-                wins: 0,
-                isAdmin: true
-            },
-            'me': {
-                username: 'me',
-                password: 'me',
-                createdAt: new Date().toISOString(),
-                gamesPlayed: 0,
-                wins: 0,
-                isAdmin: false
+    const modal = document.getElementById('signInModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    const registerLink = document.getElementById('register-link');
+    if (registerLink) {
+        registerLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleRegistrationMode();
+        });
+    }
+    
+    const signInForm = document.getElementById('signInForm');
+    if (signInForm) {
+        signInForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            
+            // Basic validation
+            if (!username || !password) {
+                alert('Please fill in all fields');
+                return;
             }
-        };
-        localStorage.setItem('users', JSON.stringify(defaultUsers));
+
+            // Get stored users
+            const users = JSON.parse(localStorage.getItem('users')) || {};
+
+            if (isRegistering) {
+                // Check if username already exists
+                if (users[username]) {
+                    alert('Username already exists');
+                    return;
+                }
+                
+                // Create new user
+                users[username] = {
+                    username,
+                    password,
+                    createdAt: new Date().toISOString(),
+                    gamesPlayed: 0,
+                    wins: 0,
+                    isAdmin: username === 'BiteLaiX'
+                };
+                
+                // Save users
+                localStorage.setItem('users', JSON.stringify(users));
+                alert('Registration successful! You can now log in.');
+                isRegistering = false;
+                toggleRegistrationMode();
+                
+            } else {
+                // Check login credentials
+                const user = users[username];
+                if (!user || user.password !== password) {
+                    alert('Invalid credentials');
+                    return;
+                }
+                
+                currentUser = {
+                    username: user.username,
+                    gamesPlayed: user.gamesPlayed,
+                    wins: user.wins,
+                    isAdmin: user.isAdmin
+                };
+                
+                // Store current user
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                if (rememberMe) {
+                    localStorage.setItem('rememberedUser', JSON.stringify(currentUser));
+                } else {
+                    localStorage.removeItem('rememberedUser');
+                }
+                
+                closeSignInModal();
+                updateUIForLoggedInUser(currentUser);
+            }
+        });
     }
 }); 
