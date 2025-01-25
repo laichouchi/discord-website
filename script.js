@@ -1,3 +1,30 @@
+// CONFIGURATION - Edit these values to change game behavior
+const GAME_CONFIG = {
+    // Win rate for the slot machine (1-100)
+    DEFAULT_WIN_RATE: 30,
+    
+    // Chances for specific numbers (must add up to 100)
+    NUMBER_CHANCES: {
+        1: 20,  // 20% chance for number 1
+        2: 15,  // 15% chance for number 2
+        3: 15,  // 15% chance for number 3
+        4: 20,  // 20% chance for number 4
+        5: 15,  // 15% chance for number 5
+        6: 15   // 15% chance for number 6
+    }
+};
+
+// Function to validate number chances
+function validateNumberChances() {
+    const total = Object.values(GAME_CONFIG.NUMBER_CHANCES).reduce((sum, chance) => sum + chance, 0);
+    if (total !== 100) {
+        console.error(`Warning: Number chances sum to ${total}%, should be 100%`);
+    }
+}
+
+// Validate configuration on load
+validateNumberChances();
+
 // Navigation active state
 document.addEventListener('DOMContentLoaded', () => {
     const sections = document.querySelectorAll('section');
@@ -329,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const existingConfig = localStorage.getItem('slotMachineConfig');
     if (!existingConfig) {
         const defaultConfig = {
-            winChance: 30
+            winChance: GAME_CONFIG.DEFAULT_WIN_RATE
         };
         localStorage.setItem('slotMachineConfig', JSON.stringify(defaultConfig));
     }
@@ -1179,23 +1206,42 @@ function updateSlotMachineConfig(newWinChance) {
 
 // Function to calculate spin result based on win chance
 function calculateSpinResult() {
-    const winChance = slotMachineConfig.winChance; // Use the stored configuration
+    const winChance = slotMachineConfig.winChance;
     const random = Math.random() * 100;
     
     if (random < winChance) {
-        // Generate a winning combination (all numbers the same)
-        const number = Math.floor(Math.random() * 6) + 1;
-        return [number, number, number];
+        // Generate a winning combination using NUMBER_CHANCES
+        const randomForNumber = Math.random() * 100;
+        let cumulativeChance = 0;
+        let selectedNumber = 1;
+        
+        for (const [number, chance] of Object.entries(GAME_CONFIG.NUMBER_CHANCES)) {
+            cumulativeChance += chance;
+            if (randomForNumber <= cumulativeChance) {
+                selectedNumber = parseInt(number);
+                break;
+            }
+        }
+        
+        return [selectedNumber, selectedNumber, selectedNumber];
     } else {
         // Generate a losing combination (at least one number different)
-        let numbers = [];
+        let numbers;
         do {
-            numbers = [
-                Math.floor(Math.random() * 6) + 1,
-                Math.floor(Math.random() * 6) + 1,
-                Math.floor(Math.random() * 6) + 1
-            ];
+            numbers = Array(3).fill(0).map(() => {
+                const randomForNumber = Math.random() * 100;
+                let cumulativeChance = 0;
+                
+                for (const [number, chance] of Object.entries(GAME_CONFIG.NUMBER_CHANCES)) {
+                    cumulativeChance += chance;
+                    if (randomForNumber <= cumulativeChance) {
+                        return parseInt(number);
+                    }
+                }
+                return 6; // Fallback
+            });
         } while (numbers[0] === numbers[1] && numbers[1] === numbers[2]);
+        
         return numbers;
     }
 }
