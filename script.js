@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add click handler for the "Nigga" button
     const niggaBtn = document.querySelector('.sign-in-btn');
     if (niggaBtn) {
-        niggaBtn.onclick = () => window.open('https://www.youtube.com/watch?v=xvFZjo5PgG0', '_blank');
+        niggaBtn.onclick = () => window.open('https://drive.google.com/drive/folders/175jXTdASbmbnO0k2ChjQRY57fWAH30Th?usp=sharing', '_blank');
     }
 });
 
