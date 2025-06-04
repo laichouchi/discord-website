@@ -2,7 +2,7 @@
 
 ## 📝 Description
 A clean, modern website for my Discord server built with pure HTML and CSS. No backend or database required - just simple static hosting.
-
+(not that well optimized but gets the job done)
 ## ✨ Features
 - Mobile-responsive design
 - Server rules section
