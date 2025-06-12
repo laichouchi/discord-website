@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Stars Background - Now on top -->
     <div class="stars">
         <div class="star"></div>
         <div class="star"></div>
@@ -33,9 +32,8 @@
         <div class="star"></div>
     </div>
     
-    <!-- Content Wrapper -->
     <div class="content-wrapper">
-        <!-- Navigation -->
+
         <nav>
             <div class="nav-container">
                 <div class="logo">
@@ -60,7 +58,6 @@
             </div>
         </nav>
 
-        <!-- Sign In Modal -->
         <div id="signInModal" class="modal">
             <div class="wrapper">
                 <form id="signInForm">
@@ -85,9 +82,8 @@
             </div>
         </div>
 
-        <!-- Tab Content -->
         <div class="tab-content">
-            <!-- Home Tab -->
+        
             <section class="tab-pane active" id="home">
                 <div class="hero">
                     <div class="hero-content">
@@ -120,7 +116,7 @@
                     </div>
                 </div>
                 
-                <!-- Milestones Section -->
+        
                 <div class="milestones">
                     <div class="milestone-container">
                         <div class="milestone-card">
@@ -160,7 +156,7 @@
                 </div>
             </section>
 
-            <!-- Events Tab -->
+    
             <section class="tab-pane" id="events">
                 <div class="section-content">
                     <h2>Featured Activities</h2>
@@ -202,7 +198,7 @@
                 </div>
             </section>
 
-            <!-- Members Tab -->
+
             <section class="tab-pane" id="members">
                 <div class="section-content">
                     <div class="member-search-section">
@@ -266,7 +262,7 @@
                 </div>
             </section>
 
-            <!-- Gallery Tab -->
+
             <section class="tab-pane" id="gallery">
                 <div class="section-content">
                     <h2>Community Gallery</h2>
@@ -287,7 +283,7 @@
                 </div>
             </section>
 
-            <!-- About Tab -->
+    
             <section class="tab-pane" id="about">
                 <div class="section-content">
                     <h2>About 「𝓤.𝓢.𝓢.𝓡」</h2>
@@ -351,14 +347,14 @@
                 </div>
             </section>
 
-            <!-- Admin Panel Tab -->
+<!-- i removed this section because it will be hosted publicly teheehe -->
             <section class="tab-pane" id="admin-panel">
                 <div class="admin-panel">
                     <h2>Admin Panel</h2>
                     <div class="admin-section">
                         <h3>User Management</h3>
                         <div class="user-list">
-                            <!-- User cards will be populated here -->
+              
                         </div>
                     </div>
                     <div class="admin-actions">
@@ -371,10 +367,10 @@
             </section>
         </div>
     </div>
-
+<!-- amna replace this but later -->
     <script src="script.js"></script>
     <script>
-        // This will be replaced by the proper tab link injection in script.js
+        
         if (currentUser && currentUser.isAdmin) {
             const adminTab = document.createElement('a');
             adminTab.href = '#';
